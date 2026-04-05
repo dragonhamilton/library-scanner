@@ -1,8 +1,10 @@
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
+import fs from 'fs';
+import path from 'path';
 import { capturePhoto, importPhoto } from './camera';
 import { detectSpines } from './claude-vision';
 import { lookupBook } from './google-books';
-import { cropSpine } from './image-processing';
+import { cropSpine, autoSliceSpines } from './image-processing';
 import { testNotionConnection, createDatabase, uploadBooks } from './notion-client';
 import { getConfig, saveConfig } from './config';
 import { setKey, getKey } from './keychain';
@@ -13,6 +15,11 @@ export function registerIpcHandlers() {
   ipcMain.handle('detectSpines', (_e, imagePath: string) => detectSpines(imagePath));
   ipcMain.handle('lookupBook', (_e, title: string, author: string) => lookupBook(title, author, getKey('googleBooksApiKey')));
   ipcMain.handle('cropSpine', (_e, imagePath: string, region: CropRegion) => cropSpine(imagePath, region));
+  ipcMain.handle('sliceSpines', (_e, imagePath: string, spineCount: number) => {
+    const scanDir = path.join(app.getPath('temp'), 'library-scanner', `scan_${Date.now()}`);
+    fs.mkdirSync(scanDir, { recursive: true });
+    return autoSliceSpines(imagePath, spineCount, scanDir);
+  });
   ipcMain.handle('testNotionConnection', (_e, token: string) => testNotionConnection(token));
   ipcMain.handle('createDatabase', (_e, token: string, parentPageUrl: string, name: string) => createDatabase(token, parentPageUrl, name));
   ipcMain.handle('uploadBooks', (_e, books: BookEntry[]) => uploadBooks(books));

@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('api', {
   saveConfig: (config: object) => ipcRenderer.invoke('saveConfig', config),
   setKey: (name: string, value: string) => ipcRenderer.invoke('setKey', name, value),
   getKey: (name: string) => ipcRenderer.invoke('getKey', name),
+  sliceSpines: (imagePath: string, spineCount: number) => ipcRenderer.invoke('sliceSpines', imagePath, spineCount),
 });
 
 // Extend Window type
@@ -32,6 +33,7 @@ declare global {
       saveConfig(config: object): Promise<void>;
       setKey(name: string, value: string): Promise<void>;
       getKey(name: string): Promise<string | null>;
+      sliceSpines(imagePath: string, spineCount: number): Promise<string[]>;
     };
   }
 }

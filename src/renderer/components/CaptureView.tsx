@@ -47,6 +47,9 @@ export default function CaptureView({ onBooksDetected }: Props) {
       setStatus('Detecting book spines via Claude Vision…');
       const spines = await window.api.detectSpines(imagePath);
 
+      setStatus(`Found ${spines.length} spines. Cropping spine images…`);
+      const spinePaths = await window.api.sliceSpines(imagePath, spines.length);
+
       setStatus(`Found ${spines.length} spines. Looking up metadata…`);
       const books: BookEntry[] = [];
       for (let i = 0; i < spines.length; i++) {
@@ -59,7 +62,7 @@ export default function CaptureView({ onBooksDetected }: Props) {
         books.push({
           id: crypto.randomUUID(),
           selected: spine.title_on_spine !== '[UNREADABLE]',
-          spineImagePath: imagePath,
+          spineImagePath: spinePaths[i] ?? imagePath,
           titleOnSpine: spine.title_on_spine,
           title: metadata?.title ?? spine.title_on_spine,
           author: metadata?.authors.join(', ') ?? spine.author_on_spine ?? '',
