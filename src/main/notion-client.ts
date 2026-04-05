@@ -44,6 +44,7 @@ export async function createDatabase(
         ISBN: { rich_text: {} },
         Notes: { rich_text: {} },
         'Spine Image': { files: {} },
+        'Date Added': { date: {} },
       },
     }),
   });
@@ -138,11 +139,13 @@ export async function uploadBooks(books: BookEntry[]): Promise<UploadResult[]> {
 
       const fileUploadId = await uploadSpineImage(token, book.spineImagePath);
 
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const properties: Record<string, unknown> = {
         Title: { title: [{ text: { content: book.title } }] },
         Author: { rich_text: [{ text: { content: book.author } }] },
         ISBN: { rich_text: [{ text: { content: book.isbn } }] },
         Notes: { rich_text: [{ text: { content: book.notes } }] },
+        'Date Added': { date: { start: today } },
       };
 
       if (fileUploadId) {
