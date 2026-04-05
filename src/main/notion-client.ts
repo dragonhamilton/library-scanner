@@ -78,9 +78,45 @@ async function uploadSpineImage(token: string, imagePath: string): Promise<strin
   }
 }
 
+async function checkDuplicate(
+  token: string,
+  databaseId: string,
+  book: BookEntry
+): Promise<boolean> {
+  // Prefer ISBN match (exact); fall back to title match
+  const filters = [];
+  if (book.isbn) {
+    filters.push({
+      property: 'ISBN',
+      rich_text: { equals: book.isbn },
+    });
+  }
+  if (book.title) {
+    filters.push({
+      property: 'Title',
+      title: { equals: book.title },
+    });
+  }
+  if (filters.length === 0) return false;
+
+  const body: Record<string, unknown> = {
+    filter: filters.length === 1 ? filters[0] : { or: filters },
+    page_size: 1,
+  };
+
+  const res = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+    method: 'POST',
+    headers: notionHeaders(token),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) return false;
+  const data = await res.json() as { results: unknown[] };
+  return data.results.length > 0;
+}
+
 export interface UploadResult {
   id: string;
-  status: 'uploaded' | 'error';
+  status: 'uploaded' | 'error' | 'duplicate';
   notionPageId?: string;
 }
 
@@ -94,6 +130,12 @@ export async function uploadBooks(books: BookEntry[]): Promise<UploadResult[]> {
 
   for (const book of books.filter(b => b.selected)) {
     try {
+      const isDuplicate = await checkDuplicate(token, databaseId, book);
+      if (isDuplicate) {
+        results.push({ id: book.id, status: 'duplicate' });
+        continue;
+      }
+
       const fileUploadId = await uploadSpineImage(token, book.spineImagePath);
 
       const properties: Record<string, unknown> = {

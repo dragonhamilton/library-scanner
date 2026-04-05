@@ -40,7 +40,7 @@ export interface BookEntry {
   isbn: string;
   notes: string;
   confidence: number;
-  status: 'pending' | 'uploading' | 'uploaded' | 'error';
+  status: 'pending' | 'uploading' | 'uploaded' | 'error' | 'duplicate';
 }
 
 export interface AppConfig {
