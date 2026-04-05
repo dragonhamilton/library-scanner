@@ -1,0 +1,14 @@
+appId: com.bookshelf-scanner.app
+productName: Bookshelf Scanner
+directories:
+  output: release
+files:
+  - dist/**/*
+  - package.json
+mac:
+  target: dmg
+  category: public.app-category.utilities
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  icon: assets/icon.icns
