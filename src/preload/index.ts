@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('api', {
   uploadBooks: (books: unknown[]) => ipcRenderer.invoke('uploadBooks', books),
   getConfig: () => ipcRenderer.invoke('getConfig'),
   saveConfig: (config: object) => ipcRenderer.invoke('saveConfig', config),
+  setKey: (name: string, value: string) => ipcRenderer.invoke('setKey', name, value),
+  getKey: (name: string) => ipcRenderer.invoke('getKey', name),
 });
 
 // Extend Window type
@@ -28,6 +30,8 @@ declare global {
       uploadBooks(books: unknown[]): Promise<{ id: string; status: string }[]>;
       getConfig(): Promise<Record<string, string>>;
       saveConfig(config: object): Promise<void>;
+      setKey(name: string, value: string): Promise<void>;
+      getKey(name: string): Promise<string | null>;
     };
   }
 }

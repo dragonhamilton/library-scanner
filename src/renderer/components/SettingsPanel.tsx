@@ -9,6 +9,11 @@ export default function SettingsPanel({ onClose }: Props) {
   const { config, save } = useConfig();
   const [anthropicKey, setAnthropicKey] = useState('');
   const [notionToken, setNotionToken] = useState('');
+  const [storedNotionToken, setStoredNotionToken] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    window.api.getKey('notionToken').then(t => setStoredNotionToken(t));
+  }, []);
   const [parentPageUrl, setParentPageUrl] = useState(config.notionParentPageUrl);
   const [dbName, setDbName] = useState(config.databaseName);
   const [defaultNotes, setDefaultNotes] = useState(config.defaultNotesTemplate);
@@ -16,11 +21,13 @@ export default function SettingsPanel({ onClose }: Props) {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [creatingDb, setCreatingDb] = useState(false);
 
+  const activeToken = notionToken || storedNotionToken || '';
+
   async function testConnection() {
     setTesting(true);
     setTestResult(null);
     try {
-      const ok = await window.api.testNotionConnection(notionToken);
+      const ok = await window.api.testNotionConnection(activeToken);
       setTestResult(ok ? '✓ Connected' : '✗ Invalid token');
     } finally {
       setTesting(false);
@@ -30,7 +37,7 @@ export default function SettingsPanel({ onClose }: Props) {
   async function setupDatabase() {
     setCreatingDb(true);
     try {
-      const dbId = await window.api.createDatabase(notionToken, parentPageUrl, dbName);
+      const dbId = await window.api.createDatabase(activeToken, parentPageUrl, dbName);
       await save({ notionParentPageUrl: parentPageUrl, databaseId: dbId, databaseName: dbName, defaultNotesTemplate: defaultNotes });
       setTestResult(`✓ Database created (${dbId.slice(0, 8)}…)`);
     } catch (err) {
@@ -41,8 +48,8 @@ export default function SettingsPanel({ onClose }: Props) {
   }
 
   async function handleSave() {
-    if (anthropicKey) await window.api.saveConfig({ anthropicKey });
-    if (notionToken) await window.api.saveConfig({ notionToken });
+    if (anthropicKey) await window.api.setKey('anthropicApiKey', anthropicKey);
+    if (notionToken) await window.api.setKey('notionToken', notionToken);
     await save({ notionParentPageUrl: parentPageUrl, databaseName: dbName, defaultNotesTemplate: defaultNotes });
     onClose();
   }
@@ -69,7 +76,7 @@ export default function SettingsPanel({ onClose }: Props) {
             onChange={e => setNotionToken(e.target.value)}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-            <button onClick={testConnection} disabled={testing || !notionToken}>
+            <button onClick={testConnection} disabled={testing || !activeToken}>
               {testing ? 'Testing…' : 'Test Connection'}
             </button>
             {testResult && <span style={{ fontSize: 13, color: testResult.startsWith('✓') ? '#4caf50' : '#f44336' }}>{testResult}</span>}
@@ -87,7 +94,7 @@ export default function SettingsPanel({ onClose }: Props) {
         <Section title="Database Name">
           <div style={{ display: 'flex', gap: 8 }}>
             <input value={dbName} onChange={e => setDbName(e.target.value)} />
-            <button onClick={setupDatabase} disabled={creatingDb || !notionToken || !parentPageUrl}>
+            <button onClick={setupDatabase} disabled={creatingDb || !activeToken || !parentPageUrl}>
               {creatingDb ? 'Creating…' : config.databaseId ? 'Recreate DB' : 'Create DB'}
             </button>
           </div>

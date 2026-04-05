@@ -5,9 +5,10 @@ import { lookupBook } from './google-books';
 import { cropSpine } from './image-processing';
 import { testNotionConnection, createDatabase, uploadBooks } from './notion-client';
 import { getConfig, saveConfig } from './config';
+import { setKey, getKey } from './keychain';
 
 export function registerIpcHandlers() {
-  ipcMain.handle('capturePhoto', () => capturePhoto());
+  ipcMain.handle('capturePhoto', (_e, base64Jpeg: string) => capturePhoto(base64Jpeg));
   ipcMain.handle('importPhoto', (_e, filePath: string) => importPhoto(filePath));
   ipcMain.handle('detectSpines', (_e, imagePath: string) => detectSpines(imagePath));
   ipcMain.handle('lookupBook', (_e, title: string, author: string) => lookupBook(title, author));
@@ -17,6 +18,8 @@ export function registerIpcHandlers() {
   ipcMain.handle('uploadBooks', (_e, books: BookEntry[]) => uploadBooks(books));
   ipcMain.handle('getConfig', () => getConfig());
   ipcMain.handle('saveConfig', (_e, config: Partial<AppConfig>) => saveConfig(config));
+  ipcMain.handle('setKey', (_e, name: string, value: string) => setKey(name as 'anthropicApiKey' | 'notionToken', value));
+  ipcMain.handle('getKey', (_e, name: string) => getKey(name as 'anthropicApiKey' | 'notionToken'));
 }
 
 // Type imports — defined here to avoid circular deps
