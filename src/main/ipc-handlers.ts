@@ -11,15 +11,15 @@ export function registerIpcHandlers() {
   ipcMain.handle('capturePhoto', (_e, base64Jpeg: string) => capturePhoto(base64Jpeg));
   ipcMain.handle('importPhoto', (_e, filePath: string) => importPhoto(filePath));
   ipcMain.handle('detectSpines', (_e, imagePath: string) => detectSpines(imagePath));
-  ipcMain.handle('lookupBook', (_e, title: string, author: string) => lookupBook(title, author));
+  ipcMain.handle('lookupBook', (_e, title: string, author: string) => lookupBook(title, author, getKey('googleBooksApiKey')));
   ipcMain.handle('cropSpine', (_e, imagePath: string, region: CropRegion) => cropSpine(imagePath, region));
   ipcMain.handle('testNotionConnection', (_e, token: string) => testNotionConnection(token));
   ipcMain.handle('createDatabase', (_e, token: string, parentPageUrl: string, name: string) => createDatabase(token, parentPageUrl, name));
   ipcMain.handle('uploadBooks', (_e, books: BookEntry[]) => uploadBooks(books));
   ipcMain.handle('getConfig', () => getConfig());
   ipcMain.handle('saveConfig', (_e, config: Partial<AppConfig>) => saveConfig(config));
-  ipcMain.handle('setKey', (_e, name: string, value: string) => setKey(name as 'anthropicApiKey' | 'notionToken', value));
-  ipcMain.handle('getKey', (_e, name: string) => getKey(name as 'anthropicApiKey' | 'notionToken'));
+  ipcMain.handle('setKey', (_e, name: string, value: string) => setKey(name as 'anthropicApiKey' | 'notionToken' | 'googleBooksApiKey', value));
+  ipcMain.handle('getKey', (_e, name: string) => getKey(name as 'anthropicApiKey' | 'notionToken' | 'googleBooksApiKey'));
 }
 
 // Type imports — defined here to avoid circular deps

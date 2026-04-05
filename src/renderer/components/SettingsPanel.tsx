@@ -9,10 +9,13 @@ export default function SettingsPanel({ onClose }: Props) {
   const { config, save } = useConfig();
   const [anthropicKey, setAnthropicKey] = useState('');
   const [notionToken, setNotionToken] = useState('');
+  const [googleBooksKey, setGoogleBooksKey] = useState('');
   const [storedNotionToken, setStoredNotionToken] = useState<string | null>(null);
+  const [hasGoogleBooksKey, setHasGoogleBooksKey] = useState(false);
 
   React.useEffect(() => {
     window.api.getKey('notionToken').then(t => setStoredNotionToken(t));
+    window.api.getKey('googleBooksApiKey').then(k => setHasGoogleBooksKey(!!k));
   }, []);
   const [parentPageUrl, setParentPageUrl] = useState(config.notionParentPageUrl);
   const [dbName, setDbName] = useState(config.databaseName);
@@ -50,6 +53,7 @@ export default function SettingsPanel({ onClose }: Props) {
   async function handleSave() {
     if (anthropicKey) await window.api.setKey('anthropicApiKey', anthropicKey);
     if (notionToken) await window.api.setKey('notionToken', notionToken);
+    if (googleBooksKey) await window.api.setKey('googleBooksApiKey', googleBooksKey);
     await save({ notionParentPageUrl: parentPageUrl, databaseName: dbName, defaultNotesTemplate: defaultNotes });
     onClose();
   }
@@ -66,6 +70,18 @@ export default function SettingsPanel({ onClose }: Props) {
             value={anthropicKey}
             onChange={e => setAnthropicKey(e.target.value)}
           />
+        </Section>
+
+        <Section title="Google Books API Key">
+          <input
+            type="password"
+            placeholder={hasGoogleBooksKey ? '(saved — leave blank to keep)' : 'AIza… (optional, improves ISBN lookup)'}
+            value={googleBooksKey}
+            onChange={e => setGoogleBooksKey(e.target.value)}
+          />
+          <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+            Get a free key at console.cloud.google.com → Books API
+          </p>
         </Section>
 
         <Section title="Notion Integration Token">

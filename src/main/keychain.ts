@@ -5,7 +5,7 @@ import fs from 'fs';
 
 const KEYS_PATH = path.join(app.getPath('userData'), 'keys.bin.json');
 
-type KeyName = 'anthropicApiKey' | 'notionToken';
+type KeyName = 'anthropicApiKey' | 'notionToken' | 'googleBooksApiKey';
 
 function loadRaw(): Record<string, string> {
   try {
