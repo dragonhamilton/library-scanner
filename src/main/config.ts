@@ -8,7 +8,7 @@ const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const DEFAULTS: AppConfig = {
   notionParentPageUrl: '',
   databaseId: '',
-  databaseName: 'Book Library',
+  databaseName: "Phoenix's Library",
   unknownDatabaseId: '',
   unknownDatabaseName: 'Unknown Books',
   defaultNotesTemplate: '',
