@@ -17,7 +17,7 @@ export default function SpineCropper({ imagePath, onCrop, onClose }: Props) {
 
   useEffect(() => {
     const img = new Image();
-    img.src = `file://${imagePath}`;
+    img.src = `local-file://${imagePath}`;
     img.onload = () => {
       const maxW = window.innerWidth * 0.8;
       const maxH = window.innerHeight * 0.8;
@@ -36,7 +36,7 @@ export default function SpineCropper({ imagePath, onCrop, onClose }: Props) {
   function draw(r: CropRegion | null) {
     if (!canvasRef.current) return;
     const img = new Image();
-    img.src = `file://${imagePath}`;
+    img.src = `local-file://${imagePath}`;
     img.onload = () => {
       const ctx = canvasRef.current!.getContext('2d')!;
       ctx.drawImage(img, 0, 0, imgSize.w * scale, imgSize.h * scale);
