@@ -26,12 +26,11 @@ export async function testNotionConnection(token: string): Promise<boolean> {
   return res.ok;
 }
 
-export async function createDatabase(
+async function createSingleDatabase(
   token: string,
-  parentPageUrl: string,
+  parentId: string,
   name: string
 ): Promise<string> {
-  const parentId = extractPageId(parentPageUrl);
   const res = await fetch('https://api.notion.com/v1/databases', {
     method: 'POST',
     headers: notionHeaders(token),
@@ -48,10 +47,22 @@ export async function createDatabase(
       },
     }),
   });
-  if (!res.ok) throw new Error(`Failed to create database: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Failed to create database "${name}": ${await res.text()}`);
   const data = await res.json() as { id: string };
-  saveConfig({ databaseId: data.id });
   return data.id;
+}
+
+export async function createDatabase(
+  token: string,
+  parentPageUrl: string,
+  name: string,
+  unknownName: string
+): Promise<{ databaseId: string; unknownDatabaseId: string }> {
+  const parentId = extractPageId(parentPageUrl);
+  const databaseId = await createSingleDatabase(token, parentId, name);
+  const unknownDatabaseId = await createSingleDatabase(token, parentId, unknownName);
+  saveConfig({ databaseId, unknownDatabaseId });
+  return { databaseId, unknownDatabaseId };
 }
 
 async function uploadSpineImage(token: string, imagePath: string): Promise<string | null> {
@@ -124,7 +135,7 @@ export interface UploadResult {
 export async function uploadBooks(books: BookEntry[]): Promise<UploadResult[]> {
   const token = getKey('notionToken');
   if (!token) throw new Error('Notion token not configured');
-  const { databaseId } = getConfig();
+  const { databaseId, unknownDatabaseId } = getConfig();
   if (!databaseId) throw new Error('Notion database not configured');
 
   const results: UploadResult[] = [];
@@ -154,10 +165,11 @@ export async function uploadBooks(books: BookEntry[]): Promise<UploadResult[]> {
         };
       }
 
+      const targetDatabaseId = book.isbn ? databaseId : (unknownDatabaseId || databaseId);
       const res = await fetch('https://api.notion.com/v1/pages', {
         method: 'POST',
         headers: notionHeaders(token),
-        body: JSON.stringify({ parent: { database_id: databaseId }, properties }),
+        body: JSON.stringify({ parent: { database_id: targetDatabaseId }, properties }),
       });
 
       if (!res.ok) throw new Error(await res.text());

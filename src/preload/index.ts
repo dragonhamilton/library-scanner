@@ -7,8 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   lookupBook: (title: string, author: string) => ipcRenderer.invoke('lookupBook', title, author),
   cropSpine: (imagePath: string, region: object) => ipcRenderer.invoke('cropSpine', imagePath, region),
   testNotionConnection: (token: string) => ipcRenderer.invoke('testNotionConnection', token),
-  createDatabase: (token: string, parentPageUrl: string, name: string) =>
-    ipcRenderer.invoke('createDatabase', token, parentPageUrl, name),
+  createDatabase: (token: string, parentPageUrl: string, name: string, unknownName: string) =>
+    ipcRenderer.invoke('createDatabase', token, parentPageUrl, name, unknownName),
   uploadBooks: (books: unknown[]) => ipcRenderer.invoke('uploadBooks', books),
   getConfig: () => ipcRenderer.invoke('getConfig'),
   saveConfig: (config: object) => ipcRenderer.invoke('saveConfig', config),
@@ -27,7 +27,7 @@ declare global {
       lookupBook(title: string, author: string): Promise<{ metadata: unknown; confidence: number }>;
       cropSpine(imagePath: string, region: object): Promise<string>;
       testNotionConnection(token: string): Promise<boolean>;
-      createDatabase(token: string, parentPageUrl: string, name: string): Promise<string>;
+      createDatabase(token: string, parentPageUrl: string, name: string, unknownName: string): Promise<{ databaseId: string; unknownDatabaseId: string }>;
       uploadBooks(books: unknown[]): Promise<{ id: string; status: string }[]>;
       getConfig(): Promise<Record<string, string>>;
       saveConfig(config: object): Promise<void>;

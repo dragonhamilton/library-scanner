@@ -9,6 +9,8 @@ const DEFAULTS: AppConfig = {
   notionParentPageUrl: '',
   databaseId: '',
   databaseName: 'Book Library',
+  unknownDatabaseId: '',
+  unknownDatabaseName: 'Unknown Books',
   defaultNotesTemplate: '',
 };
 

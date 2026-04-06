@@ -19,6 +19,7 @@ export default function SettingsPanel({ onClose }: Props) {
   }, []);
   const [parentPageUrl, setParentPageUrl] = useState(config.notionParentPageUrl);
   const [dbName, setDbName] = useState(config.databaseName);
+  const [unknownDbName, setUnknownDbName] = useState(config.unknownDatabaseName);
   const [defaultNotes, setDefaultNotes] = useState(config.defaultNotesTemplate);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -40,9 +41,9 @@ export default function SettingsPanel({ onClose }: Props) {
   async function setupDatabase() {
     setCreatingDb(true);
     try {
-      const dbId = await window.api.createDatabase(activeToken, parentPageUrl, dbName);
-      await save({ notionParentPageUrl: parentPageUrl, databaseId: dbId, databaseName: dbName, defaultNotesTemplate: defaultNotes });
-      setTestResult(`✓ Database created (${dbId.slice(0, 8)}…)`);
+      const { databaseId, unknownDatabaseId } = await window.api.createDatabase(activeToken, parentPageUrl, dbName, unknownDbName);
+      await save({ notionParentPageUrl: parentPageUrl, databaseId, databaseName: dbName, unknownDatabaseId, unknownDatabaseName: unknownDbName, defaultNotesTemplate: defaultNotes });
+      setTestResult(`✓ Both databases created`);
     } catch (err) {
       setTestResult(`✗ ${(err as Error).message}`);
     } finally {
@@ -107,14 +108,20 @@ export default function SettingsPanel({ onClose }: Props) {
           />
         </Section>
 
-        <Section title="Database Name">
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input value={dbName} onChange={e => setDbName(e.target.value)} />
-            <button onClick={setupDatabase} disabled={creatingDb || !activeToken || !parentPageUrl}>
-              {creatingDb ? 'Creating…' : config.databaseId ? 'Recreate DB' : 'Create DB'}
-            </button>
-          </div>
+        <Section title="Book Library Database Name">
+          <input value={dbName} onChange={e => setDbName(e.target.value)} />
           {config.databaseId && <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>Current DB: {config.databaseId.slice(0, 12)}…</p>}
+        </Section>
+
+        <Section title="Unknown Books Database Name">
+          <input value={unknownDbName} onChange={e => setUnknownDbName(e.target.value)} />
+          {config.unknownDatabaseId && <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>Current DB: {config.unknownDatabaseId.slice(0, 12)}…</p>}
+        </Section>
+
+        <Section title="Create Databases">
+          <button onClick={setupDatabase} disabled={creatingDb || !activeToken || !parentPageUrl}>
+            {creatingDb ? 'Creating…' : (config.databaseId && config.unknownDatabaseId) ? 'Recreate Both DBs' : 'Create Both DBs'}
+          </button>
         </Section>
 
         <Section title="Default Notes Template">

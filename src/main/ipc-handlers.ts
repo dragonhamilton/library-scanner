@@ -21,7 +21,7 @@ export function registerIpcHandlers() {
     return autoSliceSpines(imagePath, spineCount, scanDir);
   });
   ipcMain.handle('testNotionConnection', (_e, token: string) => testNotionConnection(token));
-  ipcMain.handle('createDatabase', (_e, token: string, parentPageUrl: string, name: string) => createDatabase(token, parentPageUrl, name));
+  ipcMain.handle('createDatabase', (_e, token: string, parentPageUrl: string, name: string, unknownName: string) => createDatabase(token, parentPageUrl, name, unknownName));
   ipcMain.handle('uploadBooks', (_e, books: BookEntry[]) => uploadBooks(books));
   ipcMain.handle('getConfig', () => getConfig());
   ipcMain.handle('saveConfig', (_e, config: Partial<AppConfig>) => saveConfig(config));
@@ -54,5 +54,7 @@ export interface AppConfig {
   notionParentPageUrl: string;
   databaseId: string;
   databaseName: string;
+  unknownDatabaseId: string;
+  unknownDatabaseName: string;
   defaultNotesTemplate: string;
 }

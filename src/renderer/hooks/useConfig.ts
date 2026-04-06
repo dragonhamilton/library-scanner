@@ -4,6 +4,8 @@ export interface AppConfig {
   notionParentPageUrl: string;
   databaseId: string;
   databaseName: string;
+  unknownDatabaseId: string;
+  unknownDatabaseName: string;
   defaultNotesTemplate: string;
 }
 
@@ -11,6 +13,8 @@ const DEFAULTS: AppConfig = {
   notionParentPageUrl: '',
   databaseId: '',
   databaseName: 'Book Library',
+  unknownDatabaseId: '',
+  unknownDatabaseName: 'Unknown Books',
   defaultNotesTemplate: '',
 };
 
