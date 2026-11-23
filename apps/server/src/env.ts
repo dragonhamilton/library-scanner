@@ -16,7 +16,7 @@ function ocrEngineFromEnv(): OcrEngineName {
 export const env = {
   host: process.env.HOST ?? '127.0.0.1',
   port: Number(process.env.PORT ?? 3000),
-  databaseUrl: process.env.DATABASE_URL ?? 'postgres://scanner:scanner@127.0.0.1:5432/offline_scanner',
+  databaseUrl: process.env.DATABASE_URL ?? 'postgres://scanner:scanner@127.0.0.1:5432/library_scanner',
   dataDir: path.resolve(repoRoot, process.env.DATA_DIR ?? './data'),
   ocrEngine: ocrEngineFromEnv(),
   webDist: path.join(repoRoot, 'apps/web/dist'),

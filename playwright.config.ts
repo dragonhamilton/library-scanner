@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
 // If Playwright can't find the browser, set PLAYWRIGHT_CHROMIUM_PATH.
 const port = Number(process.env.E2E_PORT ?? 3100);
 const databaseUrl =
-  process.env.E2E_DATABASE_URL ?? 'postgres://scanner:scanner@127.0.0.1:5432/offline_scanner_e2e';
+  process.env.E2E_DATABASE_URL ?? 'postgres://scanner:scanner@127.0.0.1:5432/library_scanner_e2e';
 
 export default defineConfig({
   testDir: 'e2e',

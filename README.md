@@ -1,47 +1,27 @@
-# OfflineScanner
+# library-scanner
 
-Photograph a bookshelf, cut the photo into spines, read each spine with local
-OCR, review the results and keep the library in PostgreSQL. Everything runs on
-one machine with no internet.
+I use this to catalogue my books. Take a photo of a shelf, the app cuts it into spines, reads each one with OCR, and I go through and fix whatever it got wrong. The books end up in Postgres.
 
-## What is stored
+This is ported from an Electron app that used Claude, Google Books and Notion. This version replaced all of that with local pieces.
 
-Only what the photo shows. For each spine:
-
-| Field | Source |
-|---|---|
-| title, author, publisher | guessed from OCR line sizes and positions, then corrected by hand |
-| raw OCR text + confidence | the OCR engine |
-| spine image | cropped from the photo |
-| position, width, height, color | measured from the photo |
-| status | `unreviewed` → `confirmed` or `skipped` |
-| notes | typed by hand |
-
-
-## Layout
+## What's where
 
 ```
-apps/server     Fastify API, image processing (sharp), OCR, Postgres access
-apps/web        React + Vite client
-packages/shared types used by both
-db/migrations   SQL, applied automatically when the server starts
-tools/rapidocr  optional Python OCR worker (uv)
-e2e             Playwright tests
-scripts/doctor.sh  environment check
+apps/server        Fastify API: image processing (sharp), OCR, Postgres
+apps/web           React + Vite client
+packages/shared    types both sides use
+db/migrations      SQL, run automatically when the server starts
+tools/rapidocr     optional Python OCR worker
+e2e                Playwright tests
+scripts/doctor.sh  checks the machine is set up
 ```
 
-## Install (offline machine)
+The app only stores what it can get from the photo: title, author and publisher (guessed from the OCR, then fixed by hand), the raw OCR text, the spine image, its position, size and colour, my notes, and a status (unreviewed, confirmed or skipped).
 
-Packages come only from the internal npm/PyPI mirrors, which lack most
-releases younger than about two weeks. The repo is set up for that:
+## Installing
 
-- `pnpm-workspace.yaml` sets `minimumReleaseAge` to 21 days, so pnpm never
-  picks a release the mirror is unlikely to have.
-- Every dependency installs entirely from npm. sharp's libvips and the
-  Tesseract English model both arrive as npm packages; nothing compiles or
-  downloads at install time.
-- **No lockfile is committed yet.** Build it on the offline machine, against
-  its mirror, and commit it:
+The machine only has internal npm and PyPI mirrors, and they're missing most releases from the last couple of weeks. `pnpm-workspace.yaml` sets `minimumReleaseAge` to 21 days so pnpm doesn't pick anything too new. sharp's libvips and the Tesseract English model both come as npm packages, so nothing gets compiled or downloaded during install.
+
 
 ```bash
 pnpm install
@@ -51,74 +31,53 @@ pnpm install
 git add pnpm-lock.yaml && git commit -m "Add lockfile resolved against the internal mirror"
 ```
 
-After that, install with `pnpm install --frozen-lockfile`. If the mirror ever
-lacks a locked version, delete that package's entries from the lockfile, run
-`pnpm install` to resolve an older one, and commit the result.
-
-Then check the machine:
+## Database
 
 ```bash
-pnpm doctor
-```
-
-## Database setup
-
-PostgreSQL 16 is installed but not running.
-
-```bash
-sudo pg_ctlcluster 16 main start
+/usr/lib/postgresql/16/bin/initdb -D "$HOME/pgdata" -U postgres --auth=trust
 ```
 
 ```bash
-sudo -u postgres psql -c "CREATE ROLE scanner LOGIN PASSWORD 'scanner'" -c "CREATE DATABASE offline_scanner OWNER scanner" -c "CREATE DATABASE offline_scanner_e2e OWNER scanner"
+/usr/lib/postgresql/16/bin/pg_ctl -D "$HOME/pgdata" -l "$HOME/pgdata/server.log" -o "-h 127.0.0.1 -p 5432 -k /tmp" start
 ```
 
 ```bash
-cp .env.example .env
+psql -h 127.0.0.1 -U postgres -c "CREATE ROLE scanner LOGIN PASSWORD 'scanner'" -c "CREATE DATABASE library_scanner OWNER scanner" -c "CREATE DATABASE library_scanner_e2e OWNER scanner"
 ```
 
-Tables are created when the server starts (or with `pnpm db:migrate`).
+The tables get created when the server starts, or with `pnpm db:migrate`.
 
-## Run
+## Running it
 
 ```bash
 pnpm dev
 ```
 
-Opens the API on :3000 and Vite on http://127.0.0.1:5173.
-For a single process serving the built client on :3000:
+API on port 3000, client at http://127.0.0.1:5173. To run it as one process serving the built client on 3000:
 
 ```bash
 pnpm build && pnpm start
 ```
 
-The camera button only works on `localhost`/`127.0.0.1` or over HTTPS
-(a browser rule). Uploading a photo always works.
+The camera button only works on localhost or HTTPS (browser rule). Uploading a photo always works.
 
-## Scanning flow
+Defaults are fine as they are. If you need to change something, put `PORT`, `DATABASE_URL`, `DATA_DIR` or `OCR_ENGINE` in a `.env` file in this folder.
 
-1. Upload or capture a shelf photo.
-2. The app estimates the number of books from the dark gaps between spines.
-   Correct the number if it's off.
-3. It slices the photo and reads every spine (each spine is tried rotated
-   both ways, plus upright, and the best reading is kept).
-4. Review each spine: fix title/author/publisher, then **Confirm** or **Skip**.
-   **Read again** re-runs OCR; clicking the spine image lets you recrop it.
-5. **Library** lists every book and exports CSV, JSON or a ZIP with images.
+## How a scan goes
 
-## OCR engines
+1. Upload or take a photo of a shelf.
+2. It guesses how many books there are from the dark gaps between spines. Fix the number if it's wrong.
+3. It slices the photo and reads each spine, trying it rotated both ways and upright and keeping the best reading.
+4. Go through the spines: fix title, author and publisher, then Confirm or Skip. Read again re-runs the OCR, and clicking the spine image lets you recrop it.
+5. Library lists everything and exports CSV, JSON, or a ZIP with the images.
 
-`OCR_ENGINE=tesseract` (default) uses tesseract.js with the model from
-`@tesseract.js-data/eng`. Nothing else to install.
+## OCR
 
-`OCR_ENGINE=rapidocr` starts `tools/rapidocr/ocr_server.py` with uv. It uses
-`rapidocr-onnxruntime` 1.3/1.4, which bundles its models in the wheel (the
-newer `rapidocr` package downloads models at runtime and won't work here).
-It needs Python 3.10–3.12 and uv; the first start creates the venv from the
-PyPI mirror.
+Tesseract (tesseract.js) is the default and needs nothing extra.
 
-Both sit behind the same interface (`apps/server/src/ocr`). Compare them on
-real shelf photos before settling on one.
+`OCR_ENGINE=rapidocr` runs `tools/rapidocr/ocr_server.py` with uv instead. It has to be `rapidocr-onnxruntime` 1.3 or 1.4, because those include the models in the wheel; the newer `rapidocr` package downloads them when it runs, which doesn't work here. Needs Python 3.10 to 3.12. The first start builds the venv from the PyPI mirror.
+
+Both are behind the same interface in `apps/server/src/ocr`. I haven't decided which is better on real shelves yet.
 
 ## Tests
 
@@ -130,29 +89,16 @@ pnpm typecheck
 pnpm test
 ```
 
-Unit tests (Vitest) cover spine estimation and slicing on a generated shelf
-image, the title/author guessing, CSV export, and that Tesseract reads text
-with no network.
+The Vitest tests cover counting and slicing on a generated shelf image, guessing title and author, the CSV export, and Tesseract reading text with the network off.
 
 ```bash
 pnpm e2e
 ```
 
-Playwright runs the whole flow in Chromium against `offline_scanner_e2e`
-(override with `E2E_DATABASE_URL`). It uses the Chromium already installed
-for Playwright 1.56, so `@playwright/test` is pinned to `~1.56.0`. **Never run
-`playwright install`**: browser downloads are blocked. If the browser isn't
-found, set `PLAYWRIGHT_BROWSERS_PATH` or `PLAYWRIGHT_CHROMIUM_PATH`.
+Playwright runs the whole flow in Chromium against `library_scanner_e2e` (or `E2E_DATABASE_URL` if set). It uses the Chromium that's already installed for Playwright 1.56, which is why `@playwright/test` is pinned to `~1.56.0`. Don't run `playwright install`, because browser downloads are blocked. If it can't find the browser, set `PLAYWRIGHT_BROWSERS_PATH` or `PLAYWRIGHT_CHROMIUM_PATH`.
 
-## Known limits
+## Known problems
 
-- The spine slicer ported from the Electron app smooths over about a quarter
-  of a spine's width, so narrow gaps can fade and dark print inside a spine
-  can be mistaken for a gap. A test marked `it.fails` in
-  `apps/server/test/image-processing.test.ts` records this; flip it to `it`
-  once the slicer is improved. Recropping in the review screen is the
-  workaround.
-- OCR on spines is much weaker than Claude was. The review screen is the
-  main workflow, not an occasional fix-up.
-- No login: run it on localhost, or put it behind authentication before
-  exposing it on a network.
+- The slicer smooths over about a quarter of a spine's width, so thin gaps can disappear and dark print on a spine can look like a gap. There's an `it.fails` test in `apps/server/test/image-processing.test.ts` for this; change it to `it` once the slicer is better. Until then, recrop in the review screen.
+- OCR on spines is a lot worse than Claude was, so expect to fix most books by hand.
+- There's no login. Keep it on localhost, or put it behind something that has authentication.

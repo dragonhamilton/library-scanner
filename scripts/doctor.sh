@@ -63,7 +63,7 @@ if command -v pg_lsclusters >/dev/null; then
 else note "pg_lsclusters not found (not Debian/Ubuntu packaging?)"; fi
 if command -v psql >/dev/null; then
   url=$(grep -E '^DATABASE_URL=' .env 2>/dev/null | cut -d= -f2-)
-  url=${DATABASE_URL:-${url:-postgres://scanner:scanner@127.0.0.1:5432/offline_scanner}}
+  url=${DATABASE_URL:-${url:-postgres://scanner:scanner@127.0.0.1:5432/library_scanner}}
   if psql "$url" -Atc 'select 1' >/dev/null 2>&1; then pass "can connect to $url"
   else note "cannot connect to $url yet (see README: database setup)"; fi
 fi
