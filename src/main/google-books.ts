@@ -39,8 +39,9 @@ function levenshtein(a: string, b: string): number {
   return dp[a.length][b.length];
 }
 
-async function queryGoogleBooks(q: string): Promise<BookMetadata | null> {
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=1`;
+async function queryGoogleBooks(q: string, apiKey?: string | null): Promise<BookMetadata | null> {
+  const keyParam = apiKey ? `&key=${encodeURIComponent(apiKey)}` : '';
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=1${keyParam}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const data = await res.json() as { items?: { volumeInfo: Record<string, unknown> }[] };
@@ -69,7 +70,8 @@ async function queryGoogleBooks(q: string): Promise<BookMetadata | null> {
 
 export async function lookupBook(
   title: string,
-  author: string
+  author: string,
+  apiKey?: string | null
 ): Promise<{ metadata: BookMetadata | null; confidence: number }> {
   await sleep(DELAY_MS);
 
@@ -80,7 +82,7 @@ export async function lookupBook(
   ].filter(Boolean) as string[];
 
   for (const q of queries) {
-    const result = await queryGoogleBooks(q);
+    const result = await queryGoogleBooks(q, apiKey);
     if (result?.isbn13 || result?.isbn10) {
       const conf = similarity(title, result.title);
       return { metadata: result, confidence: conf };

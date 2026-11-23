@@ -26,12 +26,11 @@ export async function testNotionConnection(token: string): Promise<boolean> {
   return res.ok;
 }
 
-export async function createDatabase(
+async function createSingleDatabase(
   token: string,
-  parentPageUrl: string,
+  parentId: string,
   name: string
 ): Promise<string> {
-  const parentId = extractPageId(parentPageUrl);
   const res = await fetch('https://api.notion.com/v1/databases', {
     method: 'POST',
     headers: notionHeaders(token),
@@ -44,13 +43,26 @@ export async function createDatabase(
         ISBN: { rich_text: {} },
         Notes: { rich_text: {} },
         'Spine Image': { files: {} },
+        'Date Added': { date: {} },
       },
     }),
   });
-  if (!res.ok) throw new Error(`Failed to create database: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Failed to create database "${name}": ${await res.text()}`);
   const data = await res.json() as { id: string };
-  saveConfig({ databaseId: data.id });
   return data.id;
+}
+
+export async function createDatabase(
+  token: string,
+  parentPageUrl: string,
+  name: string,
+  unknownName: string
+): Promise<{ databaseId: string; unknownDatabaseId: string }> {
+  const parentId = extractPageId(parentPageUrl);
+  const databaseId = await createSingleDatabase(token, parentId, name);
+  const unknownDatabaseId = await createSingleDatabase(token, parentId, unknownName);
+  saveConfig({ databaseId, unknownDatabaseId });
+  return { databaseId, unknownDatabaseId };
 }
 
 async function uploadSpineImage(token: string, imagePath: string): Promise<string | null> {
@@ -78,29 +90,73 @@ async function uploadSpineImage(token: string, imagePath: string): Promise<strin
   }
 }
 
+async function checkDuplicate(
+  token: string,
+  databaseId: string,
+  book: BookEntry
+): Promise<boolean> {
+  // Prefer ISBN match (exact); fall back to title match
+  const filters = [];
+  if (book.isbn) {
+    filters.push({
+      property: 'ISBN',
+      rich_text: { equals: book.isbn },
+    });
+  }
+  if (book.title) {
+    filters.push({
+      property: 'Title',
+      title: { equals: book.title },
+    });
+  }
+  if (filters.length === 0) return false;
+
+  const body: Record<string, unknown> = {
+    filter: filters.length === 1 ? filters[0] : { or: filters },
+    page_size: 1,
+  };
+
+  const res = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+    method: 'POST',
+    headers: notionHeaders(token),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) return false;
+  const data = await res.json() as { results: unknown[] };
+  return data.results.length > 0;
+}
+
 export interface UploadResult {
   id: string;
-  status: 'uploaded' | 'error';
+  status: 'uploaded' | 'error' | 'duplicate';
   notionPageId?: string;
 }
 
 export async function uploadBooks(books: BookEntry[]): Promise<UploadResult[]> {
   const token = getKey('notionToken');
   if (!token) throw new Error('Notion token not configured');
-  const { databaseId } = getConfig();
+  const { databaseId, unknownDatabaseId } = getConfig();
   if (!databaseId) throw new Error('Notion database not configured');
 
   const results: UploadResult[] = [];
 
   for (const book of books.filter(b => b.selected)) {
     try {
+      const isDuplicate = await checkDuplicate(token, databaseId, book);
+      if (isDuplicate) {
+        results.push({ id: book.id, status: 'duplicate' });
+        continue;
+      }
+
       const fileUploadId = await uploadSpineImage(token, book.spineImagePath);
 
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const properties: Record<string, unknown> = {
         Title: { title: [{ text: { content: book.title } }] },
         Author: { rich_text: [{ text: { content: book.author } }] },
         ISBN: { rich_text: [{ text: { content: book.isbn } }] },
         Notes: { rich_text: [{ text: { content: book.notes } }] },
+        'Date Added': { date: { start: today } },
       };
 
       if (fileUploadId) {
@@ -109,10 +165,11 @@ export async function uploadBooks(books: BookEntry[]): Promise<UploadResult[]> {
         };
       }
 
+      const targetDatabaseId = book.isbn ? databaseId : (unknownDatabaseId || databaseId);
       const res = await fetch('https://api.notion.com/v1/pages', {
         method: 'POST',
         headers: notionHeaders(token),
-        body: JSON.stringify({ parent: { database_id: databaseId }, properties }),
+        body: JSON.stringify({ parent: { database_id: targetDatabaseId }, properties }),
       });
 
       if (!res.ok) throw new Error(await res.text());

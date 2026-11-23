@@ -12,6 +12,7 @@ export default function UploadProgress({ books, onUpdateBook }: Props) {
   const selected = books.filter(b => b.selected);
   const uploadedCount = books.filter(b => b.status === 'uploaded').length;
   const errorCount = books.filter(b => b.status === 'error').length;
+  const duplicateCount = books.filter(b => b.status === 'duplicate').length;
 
   async function startUpload() {
     setUploading(true);
@@ -45,6 +46,7 @@ export default function UploadProgress({ books, onUpdateBook }: Props) {
       )}
 
       {uploadedCount > 0 && <span style={{ color: '#4caf50', fontSize: 13 }}>{uploadedCount} uploaded</span>}
+      {duplicateCount > 0 && <span style={{ color: '#ff9800', fontSize: 13 }}>{duplicateCount} skipped (duplicate)</span>}
       {errorCount > 0 && <span style={{ color: '#f44336', fontSize: 13 }}>{errorCount} errors</span>}
     </div>
   );

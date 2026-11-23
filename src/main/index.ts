@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, protocol, net } from 'electron';
 import path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 
@@ -24,6 +24,14 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Register a safe protocol to serve local image files to the renderer.
+  // Needed because the renderer loads from http://localhost in dev mode,
+  // which blocks file:// URLs as cross-origin.
+  protocol.handle('local-file', (request) => {
+    const filePath = decodeURIComponent(request.url.slice('local-file://'.length));
+    return net.fetch(`file://${filePath}`);
+  });
+
   registerIpcHandlers();
   createWindow();
 

@@ -59,7 +59,7 @@ export default function BookDetail({ book, onChange }: Props) {
         {book.spineImagePath ? (
           <div>
             <img
-              src={`file://${book.spineImagePath}`}
+              src={`local-file://${book.spineImagePath}`}
               alt="Spine"
               style={{ maxHeight: 120, borderRadius: 4, cursor: 'pointer', border: '1px solid #444' }}
               onClick={() => setShowCropper(true)}
